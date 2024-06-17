@@ -9,41 +9,52 @@ var events = [];
 let btcEvents = [];
 let ethEvents = [];
 const runWebSocket = (symbol, events) => {
-    const wsUrl = "wss://fstream.binance.com";
-    //const symbol = "btcusdt";
-    const ws = new WebSocket(
-        `${wsUrl}/stream?streams=${symbol}@aggTrade/${symbol}@markPrice`
-    );
-    //console.log(ws)
+    let ws;
 
-    ws.on("open", function open() {
-        console.log(`Connected to WebSocket for ${symbol}`);
-    });
+    const connect = () => {
+        ws = new WebSocket(
+            `${wsUrl}/stream?streams=${symbol}@aggTrade/${symbol}@markPrice`
+        );
 
-    ws.on("message", function incoming(data) {
-        const dateTime = new Date();
-        const message = JSON.parse(data);
+        ws.on("open", function open() {
+            console.log(`Connected to WebSocket for ${symbol}`);
+            // setTimeout(() => {
+            //     console.log(`Simulating disconnection for ${symbol}`);
+            //     ws.close();
+            // }, 10000);
+        });
 
-        var obj = create_event(message, events, symbol);
-        // console.log(obj)
-        if (obj) {
-            events.push(obj);
-        }
-        var updated_events = update_event(message, events);
-        if (updated_events) {
-            events = updated_events;
-        }
-        // console.log("Events:", events);
-        //console.log(`${symbol} Events:`, events);
-    });
+        ws.on("message", function incoming(data) {
+            const dateTime = new Date();
+            const message = JSON.parse(data);
 
-    ws.on("error", function error(err) {
-        console.error("WebSocket error:", err);
-    });
+            var obj = create_event(message, events, symbol);
+            if (obj) {
+                events.push(obj);
+            }
+            var updated_events = update_event(message, events);
+            if (updated_events) {
+                events = updated_events;
+            }
+        });
 
-    ws.on("close", function close() {
-        console.log("WebSocket connection closed");
-    });
+        ws.on("error", function error(err) {
+            console.error("WebSocket error:", err);
+            setTimeout(reconnect, 5000); // Try to reconnect after 5 seconds
+        });
+
+        ws.on("close", function close() {
+            console.log("WebSocket connection closed");
+            setTimeout(reconnect, 5000); // Try to reconnect after 5 seconds
+        });
+    };
+
+    const reconnect = () => {
+        console.log(`Reconnecting WebSocket for ${symbol}...`);
+        connect();
+    };
+
+    connect();
 };
 
 const updateQuestion = function (question) {
